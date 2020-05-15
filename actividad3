@@ -1,0 +1,240 @@
+#Importacion de librerias
+import pandas as pd
+import os
+import time
+import json
+import sqlite3
+from sqlite3 import Error
+import sys
+
+#Definir funciones
+def salir():
+    print("\nEl sistema se cerrara en...")
+    print("            4")
+    time.sleep(1)
+    print("            3")
+    time.sleep(1)
+    print("            2")
+    time.sleep(1)
+    print("            1")
+    time.sleep(1)
+    os.system("cls")
+    
+def clear2():
+    input("\nPresiona Enter para continuar\n")
+    os.system("cls")
+
+#Creacion del diccionario
+datos = {"Nombre" : ["Prueba"]}
+
+#Cantidad de alumnos
+Canti = 30
+
+sep = "\n" + ("*" * 30) + "\n"
+
+cont = True
+Reprobados = []
+
+#Ciclo madre
+while cont == True:
+    Opcion = int(input("\nSelecciona una opcion:\n1.- Crear un Nuevo Archivo\n2.- Cargar Calificaciones a Base de Datos\n3.- Salir\n"))
+    if Opcion == 1:
+        materias = []
+        #Creacion de materias
+        for i in range(5):
+            Materia = input(f"\nIntroduce el nombre de la {i+1}° materia\n")
+            datos[Materia] = [0]
+            materias.append(Materia)
+        #Creacion de alumnos    
+        for a in range(Canti):
+            contador = 0
+            Alumno = input(f"\nIntroduce el nombre del alumno numero {a+1}:\n")
+            #Introduce los nombres de los alumnos al diccionario "Nombre"
+            datos["Nombre"].append(Alumno)
+            for c in range(5):
+                Calif = int(input(f"\nAlumno: {Alumno}\nMateria: {materias[c]}\nCalificacion: "))  
+                #Si el alumno tiene una materia reprobada se activa el contador, si el contador llega a dos el alumno esta reprobado y su nombre se guarda en la lista de reprobados
+                if Calif < 70:
+                    contador = contador + 1
+                    if contador == 2:
+                        Reprobados.append(Alumno)
+                    else:
+                        cc = 8
+                else:
+                    cc = 8
+                #Mete las calificaciones de los alumnos en sus respectivas materias    
+                datos[materias[c]].append(Calif)
+                
+        #Creacion de dataframes        
+        df = pd.DataFrame(datos)
+        xest = pd.DataFrame(datos)
+        #Como se hizo un alumno de prueba este se elimina
+        df = df.drop([0],axis=0)
+        xest = xest.drop([0],axis=0)
+        
+        print(sep)
+        print(df)
+        form = True
+        saver = True
+        #Pregunta al usuario si desea guardar las calificaciones
+        while saver == True:
+            save = int(input("\n¿Desea guardar las calificaciones?\n1.- SI\n2.- NO\n"))
+            if save == 1:
+                while form == True:
+                    #Pregunta el formato deseado y las guarda en la ubicacion donde esta el script
+                    formato = int(input("\n¿En que formato desea guardar los archivos?\n1.- JSON\n2.- CSV\n3.- Volver\n"))
+                    if formato == 1:
+                        json = df.to_json("Calificaciones.json")
+                        print("\nGuardado correctamente")
+                        break
+                    elif formato == 2:
+                        csv = df.to_csv("Calificaciones.csv")
+                        print("\nGuardado correctamente")
+                        break
+                    elif formato == 3:
+                        break
+                    else:
+                        print("\nEsa opcion no es valida, elije otra\n")
+                        form = True
+            elif save == 2:
+                break
+            else:
+                print("\nEsa opcion no es valida, elije otra\n")
+                save = True
+        #Pregunta al usuario que quiere hacer con la data a continuacion        
+        cont2 = True       
+        while cont2 == True:
+            Opcion2 = int(input("¿Que deseas hacer con los datos?:\n1.- Datos Estadisticos\n2.- Alumnos Reprobados\n3.- Lista Completa\n4.- Salir\n"))
+            if Opcion2 == 1:
+                #Estadisticos por materia
+                est = df.describe()
+                #Estadisticos por alumno
+                xest["Promedio"] = xest.mean(axis=1)
+                xest["Max"] = xest.max(axis=1)
+                xest["Min"] = xest.min(axis=1)
+                
+                print(sep)
+                print(f"Estadisticas descriptivas por materia:\n{est}\n")
+                print(f"Estadisticas descriptivas por estudiante:\n{xest}\n")
+                #Pregunta al usuario si lo desea guardar y el formato
+                saver = True
+                while saver == True:
+                    save = int(input("¿Desea guardar los datos estadisticos?\n1.- SI\n2.- NO\n"))
+                    if save == 1:
+                        form = True
+                        while form == True:
+                            formato = int(input("\n¿En que formato desea guardar los archivos?\n1.- JSON\n2.- CSV\n3.- Volver\n"))
+                            if formato == 1:
+                                json = xest.to_json("Estadisticas por estudiante.json")
+                                json2 = est.to_json("Estadisticas por materia.json")
+                                print("Guardado correctamente\n")
+                                break
+                            
+                            elif formato == 2:
+                                csv = xest.to_csv("Estadisticas por estudiante.csv")
+                                csv2 = est.to_csv("Estadisticas por materia.csv")
+                                print("Guardado correctamente\n")
+                                break
+                            elif formato == 3:
+                                break
+                            else:
+                                print("\nEsa opcion no es valida, elije otra\n")
+                                form = True
+                                
+                    elif save == 2:
+                        break
+                    else:
+                        print("\nEsa opcion no es valida, elije otra\n")
+                        save = True
+                        clear2()
+                    cont2 = True
+                
+            #Opcion para alumnos reprobados   
+            elif Opcion2 == 2:
+                conca = []
+                print("\nAlumnos con dos o mas materias reprobadas:\n")
+                for p in range(len(Reprobados)):
+                    #Si el alumno esta en la lista de reprobados se busca su nombre en el dataframe y se guarda para despues concatenarlo con los demas reprobados
+                    Nombre = Reprobados[p]
+                    conca.append(pd.DataFrame(df.loc[df['Nombre'] == Nombre]))
+                    newdata = pd.concat(conca)                         
+                print(newdata)
+                clear2()
+                cont2 = True
+                
+            #Imprime la lista de alumnos completa   
+            elif Opcion2 == 3:
+                print(df)
+                clear2()
+                cont2 = True
+            
+            elif Opcion2 == 4:
+                salir()
+                break
+            
+            else:
+                print("\nEsa opcion no es valida, elije otra\n")
+                cont2 = True
+    
+    
+    elif Opcion == 2:
+        ar = False
+        Op = True
+        while Op == True:
+            ler2 = int(input("¿Cual es el formato del archivo?\n1.- CSV\n2.- JSON\n3.- Salir\n"))
+            if ler2 == 1:
+                try:
+                    data = pd.read_csv("Calificaciones.csv")
+                    print("\nArchivo leido correctamente\n")
+                    ar = True
+                    break
+                except:
+                    print(f"\nEl archivo Calificaciones no se encuentra: {sys.exc_info()[0]}")
+                    break
+            elif ler2 == 2:
+                try:
+                    data = pd.read_json("Calificaciones.json")
+                    print("\nArchivo leido correctamente\n")
+                    ar = True
+                    break
+                except:
+                    print(f"\nEl archivo Calificaciones no se encuentra: {sys.exc_info()[0]}")
+                    break
+            elif ler2 == 3:
+                break
+            else:
+                print("\nEsa opcion no es valida, elije otra\n")
+                Op = True
+            
+        if ler2 == 3:
+            continue
+        else:
+            pass
+        
+        if ar == True:
+            try:
+                with sqlite3.connect("Calificaciones.db") as conn:
+                    c = conn.cursor()
+                    i = input("¿Cual es el Periodo?\n")
+                    tabla = "CALIFICACIONES_PERIODO" + i
+                    c.execute(f"CREATE TABLE {tabla} (Nombre text)")
+                    data.to_sql(f"{tabla}", conn, if_exists = "replace", index = False)
+                    conn.commit()
+                    print("\nBase de datos actualizada")
+            except Error as e:
+                print(e)
+            except:
+                print(f"Se produjo el siguiente error: {sys.exc_info()[0]}\n")
+        else:
+            continue
+    
+    elif Opcion == 3:
+        salir()
+        break
+    
+    else:
+        print("\nEsa opcion no es valida, elije otra\n")
+        cont = True
+        
+                       
+            
